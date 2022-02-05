@@ -213,7 +213,30 @@ function collectDOMStat(root) {
      nodes: [div]
    }
  */
-function observeChildNodes(where, fn) {}
+function observeChildNodes(where, fn) {
+  const obj = { type: '', node: [] };
+  const observer = new MutationObserver(callback);
+  const config = {
+    childList: true,
+    subtree: true,
+  };
+  observer.observe(where, config);
+  function callback(mutationList) {
+    if (mutationList[0].addedNodes.length > 0) {
+      obj.type = 'insert';
+      for (const node of mutationList[0].addedNodes) {
+        obj.node.push(node.tagName);
+      }
+      return fn(obj);
+    } else if (mutationList[0].removedNodes.length > 0) {
+      obj.type = 'remove';
+      for (const node of mutationList[0].removedNodes) {
+        obj.node.push(node.tagName);
+      }
+      return fn(obj);
+    }
+  }
+}
 
 export {
   createDivWithText,
