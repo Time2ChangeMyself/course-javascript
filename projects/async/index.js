@@ -40,9 +40,9 @@ const homeworkContainer = document.querySelector('#app');
  https://raw.githubusercontent.com/smelukov/citiesTest/master/cities.json
  */
 function loadTowns() {
-  return fetch(
-    'https://raw.githubusercontent.com/smelukov/citiesTest/master/cities.json'
-  ).then((Response) => Response.json());
+  return fetch('https://raw.githubusercontent.com/smelukov/citiesTest/master/cities.json')
+    .then((response) => response.json())
+    .then((towns) => towns.sort((a, b) => a.name.localeCompare(b.name)));
 }
 
 /*
@@ -73,8 +73,47 @@ const filterInput = homeworkContainer.querySelector('#filter-input');
 /* Блок с результатами поиска */
 const filterResult = homeworkContainer.querySelector('#filter-result');
 
-retryButton.addEventListener('click', () => {});
+let towns = [];
 
-filterInput.addEventListener('input', function () {});
+retryButton.addEventListener('click', () => {
+  tryToLoad();
+});
+
+filterInput.addEventListener('input', function () {
+  updateFilter(this.value);
+});
+
+loadingFailedBlock.classList.add('hidden');
+filterBlock.classList.add('hidden');
+
+async function tryToLoad() {
+  try {
+    towns = await loadTowns();
+    loadingBlock.classList.add('hidden');
+    loadingFailedBlock.classList.add('hidden');
+    filterBlock.classList.remove('hidden');
+  } catch (e) {
+    loadingBlock.classList.add('hidden');
+    loadingFailedBlock.classList.remove('hidden');
+  }
+}
+
+function updateFilter(filterValue) {
+  filterResult.innerHTML = '';
+
+  const fragment = document.createDocumentFragment();
+
+  for (const town of towns) {
+    if (filterValue && isMatching(town.name, filterValue)) {
+      const townDiv = document.createElement('div');
+      townDiv.textContent = town.name;
+      fragment.append(townDiv);
+    }
+  }
+
+  filterResult.append(fragment);
+}
+
+tryToLoad();
 
 export { loadTowns, isMatching };
