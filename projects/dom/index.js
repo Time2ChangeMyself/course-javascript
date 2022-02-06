@@ -49,13 +49,11 @@ function prepend(what, where) {
  */
 function findAllPSiblings(where) {
   const newArray = [];
+  const pArray = where.querySelectorAll('p');
 
-  for (let i = 0; i < where.children.length - 1; i++) {
-    if (where.children[i].nextElementSibling.tagName === 'P') {
-      newArray.push(where.children[i]);
-    }
+  for (const elem of pArray) {
+    newArray.push(elem.previousElementSibling);
   }
-
   return newArray;
 }
 
@@ -120,14 +118,22 @@ function deleteTextNodes(where) {
    должно быть преобразовано в <span><div><b></b></div><p></p></span>
  */
 function deleteTextNodesRecursive(where) {
-  for (let i = 0; i < where.childNodes.length; i++) {
-    if (where.childNodes[i].nodeType === 3) {
-      where.removeChild(where.childNodes[i]);
-      i--;
-    } else if (where.childNodes[i].nodeType === 1) {
-      deleteTextNodesRecursive(where.childNodes[i]);
+  const nodeList = [...where.childNodes];
+  for (const node of nodeList) {
+    if (node.nodeType === 3) {
+      where.removeChild(node);
+    } else {
+      deleteTextNodesRecursive(node);
     }
   }
+  // for (let i = 0; i < where.childNodes.length; i++) {
+  //   if (where.childNodes[i].nodeType === 3) {
+  //     where.removeChild(where.childNodes[i]);
+  //     i--;
+  //   } else if (where.childNodes[i].nodeType === 1) {
+  //     deleteTextNodesRecursive(where.childNodes[i]);
+  //   }
+  // }
 }
 
 /*
@@ -153,31 +159,33 @@ function deleteTextNodesRecursive(where) {
 function collectDOMStat(root) {
   const stats = {
     tags: {},
-    clasess: {},
+    classes: {},
     texts: 0,
   };
 
-  function fn(root) {
+  (function recursiveSearch(root) {
     for (const node of root.childNodes) {
       if (node.nodeType === 3) {
         stats.texts++;
       } else if (node.nodeType === 1) {
         if (node.tagName in stats.tags) {
           stats.tags[node.tagName]++;
+        } else {
+          stats.tags[node.tagName] = 1;
         }
-        stats.tags[node.tagName] = 1;
+
         for (const className of node.classList) {
-          if (className in stats.clasess) {
-            stats.clasess[className]++;
+          if (className in stats.classes) {
+            stats.classes[className]++;
+          } else {
+            stats.classes[className] = 1;
           }
-          stats.clasess[className] = 1;
         }
-        fn(node);
+
+        recursiveSearch(node);
       }
     }
-  }
-  fn(root);
-
+  })(root);
   return stats;
 }
 
@@ -214,28 +222,26 @@ function collectDOMStat(root) {
    }
  */
 function observeChildNodes(where, fn) {
-  const obj = { type: '', node: [] };
-  const observer = new MutationObserver(callback);
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.addedNodes.length) {
+        fn({
+          type: 'insert',
+          nodes: [...mutation.addedNodes],
+        });
+      } else if (mutation.removedNodes.length) {
+        fn({
+          type: 'remove',
+          nodes: [...mutation.removedNodes],
+        });
+      }
+    }
+  });
   const config = {
     childList: true,
     subtree: true,
   };
   observer.observe(where, config);
-  function callback(mutationList) {
-    if (mutationList[0].addedNodes.length > 0) {
-      obj.type = 'insert';
-      for (const node of mutationList[0].addedNodes) {
-        obj.node.push(node.tagName);
-      }
-      return fn(obj);
-    } else if (mutationList[0].removedNodes.length > 0) {
-      obj.type = 'remove';
-      for (const node of mutationList[0].removedNodes) {
-        obj.node.push(node.tagName);
-      }
-      return fn(obj);
-    }
-  }
 }
 
 export {
